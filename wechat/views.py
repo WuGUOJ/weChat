@@ -4,8 +4,10 @@ import hashlib
 import xml.etree.ElementTree as ET
 import time
 import logging
+import requests
 
 logger = logging.getLogger(__name__)
+
 
 def index(request):
     if request.method == "GET":
@@ -29,10 +31,18 @@ def index(request):
             return HttpResponse("not match!")
 
 
+def handle_text(word):
+    url = "http://fy.webxml.com.cn/webservices/EnglishChinese.asmx/TranslatorString?wordKey={}".format(word)
+    res = requests.get(url)
+    root = ET.fromstring(res.text)
+
+    return root[3].text
+
+
 def handle(request):
     if request.method == "POST":
         data = request.body.decode()
-        logger.log(level=1,msg=data)
+        logger.log(level=1, msg=data)
         root = ET.fromstring(data)
         gz = root.find("ToUserName").text
         user = root.find("FromUserName").text
@@ -43,7 +53,7 @@ def handle(request):
             context = {
                 "gz": gz,
                 "user": user,
-                "content": content,
+                "content": handle_text(content),
                 "time": round(time.time(), 0)
             }
             return render(request, 'wechat/text.xml', context, content_type="text/xml")
